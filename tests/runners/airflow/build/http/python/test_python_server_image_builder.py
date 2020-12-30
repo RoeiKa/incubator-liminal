@@ -118,6 +118,7 @@ class TestPythonServer(TestCase):
         return {
             'task': task_id,
             'cmd': 'foo bar',
+            'framework': 'fastapi',
             'image': 'liminal_server_image',
             'source': 'baz',
             'input_type': 'my_input_type',

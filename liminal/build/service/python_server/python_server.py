@@ -24,22 +24,40 @@ from liminal.build.image_builder import ServiceImageBuilderMixin
 from liminal.build.python import BasePythonImageBuilder
 
 
-class PythonServerImageBuilder(BasePythonImageBuilder, ServiceImageBuilderMixin):
+def implementations():
+    return {'flask': {'file_name': 'flask_imp.py',
+                      'requirements': 'pyyaml Flask==1.1.1'},
+            'fastapi': {'file_name': 'fastapi_imp.py',
+                        'requirements': 'pyyaml fastapi==0.63.0 uvicorn==0.13.2'}
+            }
 
+
+class PythonServerImageBuilder(BasePythonImageBuilder, ServiceImageBuilderMixin):
     def __init__(self, config, base_path, relative_source_path, tag):
         super().__init__(config, base_path, relative_source_path, tag)
+        self.framework = self._get_framework()
 
     @staticmethod
     def _dockerfile_path():
         return os.path.join(os.path.dirname(__file__), 'Dockerfile')
 
-    @staticmethod
-    def _additional_files_from_paths():
+    def _additional_files_from_paths(self):
         return [
-            os.path.join(os.path.dirname(__file__), 'liminal_python_server.py'),
-            os.path.join(os.path.dirname(__file__), 'python_server_requirements.txt')
+            os.path.join(os.path.dirname(__file__),
+                         'base.py'),
+            os.path.join(os.path.dirname(__file__),
+                         self.framework['file_name']),
         ]
 
     def _additional_files_from_filename_content_pairs(self):
-        return super()._additional_files_from_filename_content_pairs() + \
+        f = super()._additional_files_from_filename_content_pairs()
+        data = f[0][1].\
+            replace('{{requirements}}', self.framework['requirements']).\
+            replace('{{web_framework}}', self.framework['file_name'])
+
+        return [(f[0][0], data)] + \
                [('service.yml', yaml.safe_dump(self.config))]
+
+    def _get_framework(self):
+        return implementations()[self.config.get('framework', 'flask')]
+
